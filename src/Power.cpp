@@ -24,10 +24,12 @@
 #include "nrfx_power.h"
 #endif
 
-#ifdef DEBUG_HEAP_MQTT
+#if defined(DEBUG_HEAP_MQTT) && !MESHTASTIC_EXCLUDE_MQTT
 #include "mqtt/MQTT.h"
 #include "target_specific.h"
+#if !MESTASTIC_EXCLUDE_WIFI
 #include <WiFi.h>
+#endif
 #endif
 
 #ifndef DELAY_FOREVER
@@ -498,12 +500,7 @@ void Power::shutdown()
 {
     LOG_INFO("Shutting down\n");
 
-#ifdef HAS_PMU
-    if (pmu_found == true) {
-        PMU->setChargingLedMode(XPOWERS_CHG_LED_OFF);
-        PMU->shutdown();
-    }
-#elif defined(ARCH_NRF52) || defined(ARCH_ESP32)
+#if defined(ARCH_NRF52) || defined(ARCH_ESP32)
 #ifdef PIN_LED1
     ledOff(PIN_LED1);
 #endif

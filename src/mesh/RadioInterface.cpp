@@ -151,10 +151,16 @@ static uint8_t bytes[MAX_RHPACKETLEN];
 void initRegion()
 {
     const RegionInfo *r = regions;
+#ifdef LORA_REGIONCODE
+    for (; r->code != meshtastic_Config_LoRaConfig_RegionCode_UNSET && r->code != LORA_REGIONCODE; r++)
+        ;
+    LOG_INFO("Wanted region %d, regulatory override to %s\n", config.lora.region, r->name);
+#else
     for (; r->code != meshtastic_Config_LoRaConfig_RegionCode_UNSET && r->code != config.lora.region; r++)
         ;
-    myRegion = r;
     LOG_INFO("Wanted region %d, using %s\n", config.lora.region, r->name);
+#endif
+    myRegion = r;
 }
 
 /**
@@ -334,8 +340,8 @@ bool RadioInterface::init()
     notifyDeepSleepObserver.observe(&notifyDeepSleep);
 
     // we now expect interfaces to operate in promiscuous mode
-    // radioIf.setThisAddress(nodeDB.getNodeNum()); // Note: we must do this here, because the nodenum isn't inited at constructor
-    // time.
+    // radioIf.setThisAddress(nodeDB->getNodeNum()); // Note: we must do this here, because the nodenum isn't inited at
+    // constructor time.
 
     applyModemConfig();
 
@@ -564,6 +570,8 @@ size_t RadioInterface::beginSending(meshtastic_MeshPacket *p)
     h->to = p->to;
     h->id = p->id;
     h->channel = p->channel;
+    h->next_hop = 0;   // *** For future use ***
+    h->relay_node = 0; // *** For future use ***
     if (p->hop_limit > HOP_MAX) {
         LOG_WARN("hop limit %d is too high, setting to %d\n", p->hop_limit, HOP_RELIABLE);
         p->hop_limit = HOP_RELIABLE;

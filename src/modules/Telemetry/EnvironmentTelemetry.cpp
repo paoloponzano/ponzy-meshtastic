@@ -104,6 +104,7 @@ int32_t EnvironmentTelemetryModule::runOnce()
         uint32_t now = millis();
         if (((lastSentToMesh == 0) ||
              ((now - lastSentToMesh) >= Default::getConfiguredOrDefaultMs(moduleConfig.telemetry.environment_update_interval))) &&
+            airTime->isTxAllowedChannelUtil(config.device.role != meshtastic_Config_DeviceConfig_Role_SENSOR) &&
             airTime->isTxAllowedAirUtil()) {
             sendTelemetry();
             lastSentToMesh = now;
@@ -180,6 +181,8 @@ void EnvironmentTelemetryModule::drawFrame(OLEDDisplay *display, OLEDDisplayUiSt
         display->drawString(x, y += fontHeight(FONT_SMALL),
                             "Volt/Cur: " + String(lastMeasurement.variant.environment_metrics.voltage, 0) + "V / " +
                                 String(lastMeasurement.variant.environment_metrics.current, 0) + "mA");
+    if (lastMeasurement.variant.environment_metrics.iaq != 0)
+        display->drawString(x, y += fontHeight(FONT_SMALL), "IAQ: " + String(lastMeasurement.variant.environment_metrics.iaq));
 }
 
 bool EnvironmentTelemetryModule::handleReceivedProtobuf(const meshtastic_MeshPacket &mp, meshtastic_Telemetry *t)

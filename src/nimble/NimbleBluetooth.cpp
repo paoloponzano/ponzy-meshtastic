@@ -1,7 +1,9 @@
-#include "NimbleBluetooth.h"
-#include "BluetoothCommon.h"
-#include "PowerFSM.h"
 #include "configuration.h"
+#if !MESHTASTIC_EXCLUDE_BLUETOOTH
+#include "BluetoothCommon.h"
+#include "NimbleBluetooth.h"
+#include "PowerFSM.h"
+
 #include "main.h"
 #include "mesh/PhoneAPI.h"
 #include "mesh/mesh-pb-constants.h"
@@ -110,6 +112,12 @@ void NimbleBluetooth::shutdown()
     NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->reset();
     pAdvertising->stop();
+}
+
+// Extra power-saving on some devices
+void NimbleBluetooth::deinit()
+{
+    NimBLEDevice::deinit();
 }
 
 bool NimbleBluetooth::isActive()
@@ -227,3 +235,4 @@ void clearNVS()
     ESP.restart();
 #endif
 }
+#endif

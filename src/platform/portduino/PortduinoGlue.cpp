@@ -77,6 +77,10 @@ void portduinoSetup()
     gpioInit();
 
     std::string gpioChipName = "gpiochip";
+    settingsStrings[i2cdev] = "";
+    settingsStrings[keyboardDevice] = "";
+    settingsStrings[webserverrootpath] = "";
+    settingsStrings[spidev] = "";
 
     YAML::Node yamlConfig;
 
@@ -106,6 +110,8 @@ void portduinoSetup()
         }
     } else {
         std::cout << "No 'config.yaml' found, running simulated." << std::endl;
+        settingsMap[maxnodes] = 200;               // Default to 200 nodes
+        settingsMap[logoutputlevel] = level_debug; // Default to debug
         // Set the random seed equal to TCPPort to have a different seed per instance
         randomSeed(TCPPort);
         return;
@@ -199,6 +205,8 @@ void portduinoSetup()
             settingsMap[webserverport] = (yamlConfig["Webserver"]["Port"]).as<int>(-1);
             settingsStrings[webserverrootpath] = (yamlConfig["Webserver"]["RootPath"]).as<std::string>("");
         }
+
+        settingsMap[maxnodes] = (yamlConfig["General"]["MaxNodes"]).as<int>(200);
 
     } catch (YAML::Exception e) {
         std::cout << "*** Exception " << e.what() << std::endl;

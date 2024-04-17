@@ -3,6 +3,7 @@
 #include "Observer.h"
 #include <Arduino.h>
 #include <assert.h>
+#include <vector>
 
 #include "MeshTypes.h"
 #include "NodeStatus.h"
@@ -37,6 +38,19 @@ uint32_t sinceLastSeen(const meshtastic_NodeInfoLite *n);
 /// Given a packet, return how many seconds in the past (vs now) it was received
 uint32_t sinceReceived(const meshtastic_MeshPacket *p);
 
+enum LoadFileResult {
+    // Successfully opened the file
+    SUCCESS = 1,
+    // File does not exist
+    NOT_FOUND = 2,
+    // Device does not have a filesystem
+    NO_FILESYSTEM = 3,
+    // File exists, but could not decode protobufs
+    DECODE_FAILED = 4,
+    // File exists, but open failed for some reason
+    OTHER_FAILURE = 5
+};
+
 class NodeDB
 {
     // NodeNum provisionalNodeNum; // if we are trying to find a node num this is our current attempt
@@ -45,20 +59,17 @@ class NodeDB
     // Eventually use a smarter datastructure
     // HashMap<NodeNum, NodeInfo> nodes;
     // Note: these two references just point into our static array we serialize to/from disk
-    meshtastic_NodeInfoLite *meshNodes;
-    pb_size_t *numMeshNodes;
 
   public:
+    std::vector<meshtastic_NodeInfoLite> *meshNodes;
     bool updateGUI = false; // we think the gui should definitely be redrawn, screen will clear this once handled
     meshtastic_NodeInfoLite *updateGUIforNode = NULL; // if currently showing this node, we think you should update the GUI
     Observable<const meshtastic::NodeStatus *> newStatus;
+    pb_size_t numMeshNodes;
 
     /// don't do mesh based algorithm for node id assignment (initially)
     /// instead just store in flash - possibly even in the initial alpha release do this hack
     NodeDB();
-
-    /// Called from service after app start, to do init which can only be done after OS load
-    void init();
 
     /// write to flash
     void saveToDisk(int saveWhat = SEGMENT_CONFIG | SEGMENT_MODULECONFIG | SEGMENT_DEVICESTATE | SEGMENT_CHANNELS),
@@ -117,7 +128,8 @@ class NodeDB
 
     bool factoryReset();
 
-    bool loadProto(const char *filename, size_t protoSize, size_t objSize, const pb_msgdesc_t *fields, void *dest_struct);
+    LoadFileResult loadProto(const char *filename, size_t protoSize, size_t objSize, const pb_msgdesc_t *fields,
+                             void *dest_struct);
     bool saveProto(const char *filename, size_t protoSize, const pb_msgdesc_t *fields, const void *dest_struct);
 
     void installRoleDefaults(meshtastic_Config_DeviceConfig_Role role);
@@ -126,12 +138,14 @@ class NodeDB
 
     meshtastic_NodeInfoLite *getMeshNodeByIndex(size_t x)
     {
-        assert(x < *numMeshNodes);
-        return &meshNodes[x];
+        assert(x < numMeshNodes);
+        return &meshNodes->at(x);
     }
 
     meshtastic_NodeInfoLite *getMeshNode(NodeNum n);
-    size_t getNumMeshNodes() { return *numMeshNodes; }
+    size_t getNumMeshNodes() { return numMeshNodes; }
+
+    void clearLocalPosition();
 
     void setLocalPosition(meshtastic_Position position, bool timeOnly = false)
     {
@@ -167,7 +181,7 @@ class NodeDB
     void installDefaultDeviceState(), installDefaultChannels(), installDefaultConfig(), installDefaultModuleConfig();
 };
 
-extern NodeDB nodeDB;
+extern NodeDB *nodeDB;
 
 /*
   If is_router is set, we use a number of different default values
